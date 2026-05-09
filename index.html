@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>CognoSpace Humanoid Robot</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --orange:#ff6f00;--orange2:#ffa000;--teal:#00acc1;--teal2:#00838f;
+  --green:#2e7d32;--blue:#1565c0;--purple:#6a1b9a;--red:#b71c1c;
+  --bg:#0a0e1a;--card:#111827;--card2:#1a2235;--border:#1e3a4a;
+  --text:#e0f7fa;--muted:#607d8b;
+}
+body{font-family:'Exo 2',sans-serif;background:var(--bg);color:var(--text);padding:10px;min-height:100vh;overflow-x:hidden;}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,172,193,0.015) 2px,rgba(0,172,193,0.015) 4px);}
+.container{max-width:640px;margin:0 auto;width:100%;position:relative;z-index:1;}
+
+/* Header */
+.header{background:linear-gradient(135deg,#0d1b2a,#1a2a3a);padding:20px 18px 16px;border-radius:16px;margin-bottom:12px;
+  text-align:center;border:1px solid var(--teal);box-shadow:0 0 30px rgba(0,172,193,0.2),inset 0 1px 0 rgba(0,172,193,0.1);}
+.header h1{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:var(--teal);
+  letter-spacing:2px;text-shadow:0 0 20px rgba(0,172,193,0.5);margin-bottom:4px;}
+.subtitle{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.conn-badge{display:inline-block;margin-top:10px;padding:5px 14px;border-radius:20px;font-size:11px;
+  font-weight:700;background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid var(--border);
+  font-family:'Orbitron',monospace;letter-spacing:1px;}
+.conn-badge.connected{background:rgba(46,125,50,0.2);color:#4caf50;border-color:#4caf50;}
+.conn-badge.error{background:rgba(183,28,28,0.2);color:#ef5350;border-color:#ef5350;}
+
+/* Cards */
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:10px;
+  border:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,0.4);}
+.card-title{font-family:'Orbitron',monospace;font-size:10px;color:var(--teal);text-transform:uppercase;
+  margin-bottom:14px;font-weight:700;letter-spacing:2px;border-left:3px solid var(--orange);padding-left:10px;}
+
+/* Inputs */
+.conn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+@media(max-width:420px){.conn-row{grid-template-columns:1fr;}}
+.lbl{font-size:10px;color:var(--teal);font-weight:700;margin-bottom:5px;letter-spacing:1px;text-transform:uppercase;}
+.conn-input{width:100%;padding:11px;border:1px solid var(--border);border-radius:8px;font-size:14px;
+  background:#0d1b2a;color:var(--text);font-weight:500;font-family:'Exo 2',sans-serif;}
+.conn-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 8px rgba(0,172,193,0.3);}
+.connect-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--teal2),var(--teal));
+  color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;
+  font-family:'Orbitron',monospace;letter-spacing:1px;}
+.message-input{width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:15px;
+  margin-bottom:10px;background:#0d1b2a;color:var(--text);font-weight:500;font-family:'Exo 2',sans-serif;}
+.message-input:focus{outline:none;border-color:var(--teal);}
+
+/* Buttons */
+.send-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--orange),var(--orange2));
+  color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;
+  margin-bottom:6px;font-family:'Orbitron',monospace;letter-spacing:1px;}
+.disp-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue),#1976d2);
+  color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;
+  font-family:'Orbitron',monospace;letter-spacing:1px;}
+
+/* Voice/AI */
+.voice-row{display:flex;gap:10px;align-items:center;margin-bottom:12px;}
+.mic-btn{flex-shrink:0;width:60px;height:60px;border-radius:50%;border:2px solid var(--teal);
+  background:#0d1b2a;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;position:relative;}
+.mic-btn.listening{background:rgba(255,111,0,0.2);border-color:var(--orange);animation:pulse 0.8s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,111,0,0.4);}50%{box-shadow:0 0 0 14px rgba(255,111,0,0);}}
+.mic-transcript{flex:1;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;
+  background:#0d1b2a;color:var(--text);min-height:46px;line-height:1.4;}
+.ai-response-box{background:#0d1b2a;border:1px solid var(--teal);border-radius:8px;padding:14px;
+  min-height:64px;font-size:14px;color:#b2ebf2;font-weight:500;margin-bottom:10px;line-height:1.6;
+  box-shadow:0 0 12px rgba(0,172,193,0.1);}
+.ai-send-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--purple),#8e24aa);
+  color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;
+  font-family:'Orbitron',monospace;letter-spacing:1px;}
+.ai-send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* Response tag badges */
+.resp-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.tag{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;border:1px solid;}
+.tag-servo{color:#ff6f00;border-color:#ff6f00;background:rgba(255,111,0,0.1);}
+.tag-motor{color:#00acc1;border-color:#00acc1;background:rgba(0,172,193,0.1);}
+.tag-action{color:#8e24aa;border-color:#8e24aa;background:rgba(142,36,170,0.1);}
+.tag-buzzer{color:#ffa000;border-color:#ffa000;background:rgba(255,160,0,0.1);}
+.tag-qa{color:#4caf50;border-color:#4caf50;background:rgba(76,175,80,0.1);}
+
+/* Talk to Robot */
+.resp-box{background:#0d1b2a;border:1px solid var(--border);border-radius:8px;padding:14px;
+  min-height:60px;font-size:14px;color:#b2ebf2;line-height:1.6;margin-bottom:10px;}
+.speak-btn{width:100%;padding:10px;background:linear-gradient(135deg,var(--green),#43a047);
+  color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+  font-family:'Orbitron',monospace;letter-spacing:1px;}
+
+/* Camera */
+#camContainer{position:relative;width:100%;height:180px;background:#000;border-radius:10px;
+  overflow:hidden;border:1px solid var(--border);margin-bottom:10px;}
+#camPreview,#camCanvas{width:100%;height:100%;object-fit:cover;}
+.cam-btn-row{display:flex;gap:8px;margin-bottom:8px;}
+.cam-btn{flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:#0d1b2a;
+  color:var(--teal);font-size:11px;font-weight:700;cursor:pointer;}
+.cam-btn:hover{background:var(--card2);}
+.cam-btn.active{background:rgba(0,172,193,0.2);border-color:var(--teal);}
+
+/* Log */
+.log-box{background:#060a12;border:1px solid var(--border);border-radius:8px;padding:10px;
+  height:110px;overflow-y:auto;font-family:monospace;font-size:11px;color:#546e7a;}
+.log-box div{border-bottom:1px solid rgba(255,255,255,0.03);padding:2px 0;}
+
+/* Joystick */
+.joystick-container{display:flex;flex-direction:column;align-items:center;padding:8px 0;}
+#joystick{width:190px;height:190px;background:radial-gradient(circle,#0d1b2a,#060a12);border-radius:50%;
+  position:relative;touch-action:none;border:2px solid var(--teal);
+  box-shadow:0 0 20px rgba(0,172,193,0.2),inset 0 0 40px rgba(0,0,0,0.5);margin:0 auto;}
+#stick{width:62px;height:62px;background:linear-gradient(135deg,var(--orange),var(--orange2));border-radius:50%;
+  position:absolute;box-shadow:0 4px 16px rgba(255,111,0,0.5);cursor:grab;border:2px solid rgba(255,255,255,0.2);}
+
+/* Servo */
+.servo-card{background:#0d1b2a;padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:10px;}
+.servo-label{font-size:10px;color:var(--teal);text-transform:uppercase;margin-bottom:6px;font-weight:700;
+  text-align:center;letter-spacing:1px;}
+.servo-value{font-size:22px;font-weight:900;color:var(--orange);margin:6px 0;text-align:center;
+  font-family:'Orbitron',monospace;}
+.servo-btns{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px;}
+.servo-btn{padding:9px 4px;background:linear-gradient(135deg,var(--teal2),var(--teal));border:none;
+  border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;color:#fff;}
+.hand-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.hand-section{background:#0d1b2a;padding:12px;border-radius:8px;border:1px solid var(--border);}
+.hand-title{text-align:center;font-size:12px;color:var(--orange);font-weight:800;margin-bottom:10px;
+  text-transform:uppercase;font-family:'Orbitron',monospace;letter-spacing:1px;}
+
+/* Actions */
+.action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;}
+@media(max-width:360px){.action-grid{grid-template-columns:1fr;}}
+.action-btn{padding:14px;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:'Orbitron',monospace;letter-spacing:0.5px;
+  background:linear-gradient(135deg,var(--orange),var(--orange2));
+  box-shadow:0 2px 10px rgba(0,0,0,0.3);}
+.action-btn.blue{background:linear-gradient(135deg,var(--blue),#1976d2);}
+.action-btn.green{background:linear-gradient(135deg,var(--green),#43a047);}
+.action-btn.purple{background:linear-gradient(135deg,var(--purple),#8e24aa);}
+.action-btn.red{background:linear-gradient(135deg,var(--red),#e53935);}
+.action-btn.teal{background:linear-gradient(135deg,#00695c,#00897b);}
+.action-btn.pink{background:linear-gradient(135deg,#880e4f,#c2185b);}
+
+/* Emoji */
+.emoji-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:4px;}
+@media(max-width:360px){.emoji-grid{grid-template-columns:repeat(3,1fr);}}
+.emoji-btn{padding:10px 4px;border:1px solid var(--border);border-radius:8px;font-size:12px;
+  font-weight:700;cursor:pointer;background:#0d1b2a;color:var(--teal);}
+.emoji-btn.active{border-color:var(--orange);background:rgba(255,111,0,0.1);color:var(--orange);}
+.emoji-auto{width:100%;padding:11px;background:linear-gradient(135deg,#00695c,#00897b);color:#fff;
+  border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;
+  font-family:'Orbitron',monospace;letter-spacing:1px;}
+
+/* Status */
+.status-display{background:linear-gradient(135deg,#0d1b2a,var(--card2));padding:18px;border-radius:10px;
+  text-align:center;color:var(--teal);font-size:18px;font-weight:900;border:1px solid var(--teal);
+  font-family:'Orbitron',monospace;letter-spacing:2px;
+  text-shadow:0 0 10px rgba(0,172,193,0.5);}
+
+/* Modals */
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.8);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal.show{display:flex;}
+.modal-box{background:var(--card);border-radius:16px;padding:20px;width:90%;max-width:380px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.6);border:1px solid var(--teal);}
+.modal-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;color:var(--teal);
+  margin-bottom:14px;text-align:center;border-bottom:1px solid var(--border);padding-bottom:12px;
+  letter-spacing:2px;}
+.song-btn{width:100%;padding:13px;margin-bottom:8px;color:#fff;border:none;border-radius:8px;
+  font-size:13px;font-weight:700;cursor:pointer;text-align:left;font-family:'Exo 2',sans-serif;}
+.song-btn:nth-child(2){background:linear-gradient(135deg,var(--purple),#8e24aa);}
+.song-btn:nth-child(3){background:linear-gradient(135deg,var(--blue),#1976d2);}
+.song-btn:nth-child(4){background:linear-gradient(135deg,var(--red),#e53935);}
+.song-btn:nth-child(5){background:linear-gradient(135deg,var(--orange),var(--orange2));}
+.song-btn:nth-child(6){background:linear-gradient(135deg,#00695c,#00897b);}
+.close-btn{width:100%;padding:12px;margin-top:4px;background:#263238;color:#90a4ae;border:1px solid var(--border);
+  border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Exo 2',sans-serif;}
+.diff-btn{width:100%;padding:14px;margin-bottom:8px;border:none;border-radius:8px;font-size:14px;
+  font-weight:700;cursor:pointer;color:#fff;font-family:'Exo 2',sans-serif;}
+.jump-btn{width:100%;padding:22px;background:linear-gradient(135deg,var(--orange),var(--orange2));
+  color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:900;cursor:pointer;
+  font-family:'Orbitron',monospace;letter-spacing:2px;}
+
+/* Voice hint pills */
+.voice-hints{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+.hint-pill{padding:4px 10px;border:1px solid var(--border);border-radius:20px;font-size:10px;
+  color:var(--muted);background:#0d1b2a;cursor:pointer;}
+.hint-pill:hover{border-color:var(--teal);color:var(--teal);}
+
+/* Speaking indicator */
+.speaking-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--teal);
+  margin-left:8px;animation:blink 0.6s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.1;}}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <h1>⚡ COGNOSPACE</h1>
+  <div class="subtitle">Humanoid Robot — Advanced Control System</div>
+  <span class="conn-badge" id="connBadge">NOT CONNECTED</span>
+</div>
+
+<!-- Connection Setup -->
+<div class="card">
+  <div class="card-title">▸ Connect to Robot</div>
+  <div class="conn-row">
+    <div>
+      <div class="lbl">Robot IP Address</div>
+      <input type="text" id="robotIP" class="conn-input" placeholder="192.168.x.x"/>
+    </div>
+    <div>
+      <div class="lbl">Gemini API Key</div>
+      <input type="password" id="gemKey" class="conn-input" placeholder="AIzaSy..."/>
+    </div>
+  </div>
+  <button class="connect-btn" onclick="connectRobot()">◉ CONNECT TO HUMANOID</button>
+</div>
+
+<!-- Voice + AI Brain -->
+<div class="card">
+  <div class="card-title">▸ Voice Command + AI Brain</div>
+  <div class="voice-row">
+    <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Tap to speak">🎤</button>
+    <div class="mic-transcript" id="micTranscript">Tap mic and speak a command or question...</div>
+  </div>
+  <div class="lbl">AI Response <span id="speakingIndicator" style="display:none"><span class="speaking-dot"></span></span></div>
+  <div class="ai-response-box" id="aiResponse">AI reply will appear here and be spoken aloud...</div>
+  <div class="resp-tags" id="aiTags"></div>
+  <button class="ai-send-btn" id="aiSendBtn" onclick="sendToAI()" style="margin-top:10px">🚀 SEND TO AI BRAIN</button>
+  <div class="voice-hints">
+    <span class="hint-pill" onclick="setMicText('go forward')">go forward</span>
+    <span class="hint-pill" onclick="setMicText('wave')">wave</span>
+    <span class="hint-pill" onclick="setMicText('dance')">dance</span>
+    <span class="hint-pill" onclick="setMicText('clap')">clap</span>
+    <span class="hint-pill" onclick="setMicText('play mario')">play mario</span>
+    <span class="hint-pill" onclick="setMicText('nod yes')">nod yes</span>
+    <span class="hint-pill" onclick="setMicText('shake no')">shake no</span>
+    <span class="hint-pill" onclick="setMicText('raise right hand')">raise right hand</span>
+    <span class="hint-pill" onclick="setMicText('who are you')">who are you</span>
+    <span class="hint-pill" onclick="setMicText('what is robotics')">what is robotics</span>
+    <span class="hint-pill" onclick="setMicText('tell me a joke')">tell me a joke</span>
+    <span class="hint-pill" onclick="setMicText('what is AI')">what is AI</span>
+  </div>
+</div>
+
+<!-- Talk to Robot (Built-in Q&A) -->
+<div class="card">
+  <div class="card-title">▸ Talk to Robot — Built-in Q&A</div>
+  <input type="text" id="msg" class="message-input" placeholder="Ask me about CognoSpace, STEM, robotics..."/>
+  <button class="send-btn" onclick="sendMsg()">◉ SEND MESSAGE</button>
+  <div class="lbl">Robot Reply <span id="localSpeakingDot" style="display:none"><span class="speaking-dot"></span></span></div>
+  <div class="resp-box" id="localResp">Response will appear here and play through your speaker...</div>
+  <button class="speak-btn" id="speakAgainBtn" onclick="speakAgain()" style="display:none">🔊 SPEAK AGAIN</button>
+  <div style="margin-top:10px;font-size:10px;color:var(--muted);letter-spacing:0.5px;">
+    KEYWORD TOPICS: who are you · cognospace · founder · location · stem · robotics · arduino · python · ai · iot · 3d printing · drones · sensors · career · anatomy · dance · wave · clap · greet · joke · morning · bye · thank you
+  </div>
+</div>
+
+<!-- Display on LCD -->
+<div class="card">
+  <div class="card-title">▸ Display on Robot LCD</div>
+  <input type="text" id="dispMsg" class="message-input" placeholder="Type text to show on robot LCD..."/>
+  <button class="disp-btn" onclick="sendDisplay()">◉ SHOW ON LCD</button>
+</div>
+
+<!-- Camera / Visual Cortex -->
+<div class="card">
+  <div class="card-title">▸ Visual Cortex (Camera)</div>
+  <div id="camContainer">
+    <video id="camPreview" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+    <canvas id="camCanvas" style="display:none;width:100%;height:100%;object-fit:cover;"></canvas>
+  </div>
+  <div class="cam-btn-row">
+    <button class="cam-btn" id="btnCamToggle" onclick="toggleCamera()">📸 Camera On/Off</button>
+    <button class="cam-btn" id="btnFreeze" onclick="freezeCamera()" disabled>❄️ Freeze</button>
+    <button class="cam-btn" id="btnRetake" onclick="retakeCamera()" style="display:none">🔄 Reset</button>
+  </div>
+  <input type="text" id="visionQ" class="message-input" placeholder="Ask about what camera sees..." style="margin-bottom:8px;"/>
+  <div class="cam-btn-row">
+    <button class="cam-btn" onclick="analyzeVisionCustom()">❓ Ask AI</button>
+    <button class="cam-btn" onclick="analyzeVision(false,'Describe briefly.')">👁️ Auto Describe</button>
+    <button class="cam-btn" onclick="analyzeVision(true,null)">🤖 Vision Command</button>
+  </div>
+</div>
+
+<!-- OLED Emoji -->
+<div class="card">
+  <div class="card-title">▸ OLED Eye Expressions</div>
+  <div class="emoji-grid">
+    <button class="emoji-btn" id="em1"  onclick="setEmoji(1)">😊 Happy</button>
+    <button class="emoji-btn" id="em2"  onclick="setEmoji(2)">😠 Angry</button>
+    <button class="emoji-btn" id="em3"  onclick="setEmoji(3)">😲 Surprise</button>
+    <button class="emoji-btn" id="em4"  onclick="setEmoji(4)">😢 Sad</button>
+    <button class="emoji-btn" id="em5"  onclick="setEmoji(5)">😉 Wink</button>
+    <button class="emoji-btn" id="em6"  onclick="setEmoji(6)">❤️ Love</button>
+    <button class="emoji-btn" id="em7"  onclick="setEmoji(7)">🤔 Think</button>
+    <button class="emoji-btn" id="em8"  onclick="setEmoji(8)">😴 Sleep</button>
+    <button class="emoji-btn" id="em9"  onclick="setEmoji(9)">💫 Dizzy</button>
+    <button class="emoji-btn" id="em10" onclick="setEmoji(10)">🤨 Suspect</button>
+  </div>
+  <button class="emoji-auto" onclick="setEmoji(0)">◎ AUTO ANIMATE (IDLE)</button>
+</div>
+
+<!-- Joystick -->
+<div class="card">
+  <div class="card-title">▸ Movement Joystick</div>
+  <div class="joystick-container">
+    <div id="joystick"><div id="stick"></div></div>
+  </div>
+</div>
+
+<!-- Servo Controls -->
+<div class="card">
+  <div class="card-title">▸ Servo Controls</div>
+  <div class="servo-card">
+    <div class="servo-label">Head Rotation</div>
+    <div class="servo-value" id="hVal">90°</div>
+    <div class="servo-btns">
+      <button class="servo-btn" onclick="setSv('head',0)">0</button>
+      <button class="servo-btn" onclick="setSv('head',45)">45</button>
+      <button class="servo-btn" onclick="setSv('head',90)">90</button>
+      <button class="servo-btn" onclick="setSv('head',135)">135</button>
+      <button class="servo-btn" onclick="setSv('head',180)">180</button>
+    </div>
+  </div>
+  <div class="hand-controls">
+    <div class="hand-section">
+      <div class="hand-title">Left Hand</div>
+      <div class="servo-label">L1 — Shoulder</div>
+      <div class="servo-value" id="l1Val">90°</div>
+      <div class="servo-btns">
+        <button class="servo-btn" onclick="setSv('lh1',0)">0</button>
+        <button class="servo-btn" onclick="setSv('lh1',45)">45</button>
+        <button class="servo-btn" onclick="setSv('lh1',90)">90</button>
+        <button class="servo-btn" onclick="setSv('lh1',135)">135</button>
+        <button class="servo-btn" onclick="setSv('lh1',180)">180</button>
+      </div>
+      <div class="servo-label" style="margin-top:10px">L2 — Elbow</div>
+      <div class="servo-value" id="l2Val">180°</div>
+      <div class="servo-btns">
+        <button class="servo-btn" onclick="setSv('lh2',0)">0</button>
+        <button class="servo-btn" onclick="setSv('lh2',45)">45</button>
+        <button class="servo-btn" onclick="setSv('lh2',90)">90</button>
+        <button class="servo-btn" onclick="setSv('lh2',135)">135</button>
+        <button class="servo-btn" onclick="setSv('lh2',180)">180</button>
+      </div>
+    </div>
+    <div class="hand-section">
+      <div class="hand-title">Right Hand</div>
+      <div class="servo-label">R1 — Shoulder</div>
+      <div class="servo-value" id="r1Val">90°</div>
+      <div class="servo-btns">
+        <button class="servo-btn" onclick="setSv('rh1',0)">0</button>
+        <button class="servo-btn" onclick="setSv('rh1',45)">45</button>
+        <button class="servo-btn" onclick="setSv('rh1',90)">90</button>
+        <button class="servo-btn" onclick="setSv('rh1',135)">135</button>
+        <button class="servo-btn" onclick="setSv('rh1',180)">180</button>
+      </div>
+      <div class="servo-label" style="margin-top:10px">R2 — Elbow</div>
+      <div class="servo-value" id="r2Val">180°</div>
+      <div class="servo-btns">
+        <button class="servo-btn" onclick="setSv('rh2',0)">0</button>
+        <button class="servo-btn" onclick="setSv('rh2',45)">45</button>
+        <button class="servo-btn" onclick="setSv('rh2',90)">90</button>
+        <button class="servo-btn" onclick="setSv('rh2',135)">135</button>
+        <button class="servo-btn" onclick="setSv('rh2',180)">180</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+  <div class="card-title">▸ Quick Actions</div>
+  <div class="action-grid">
+    <button class="action-btn"        onclick="doAct('wave')">👋 Wave</button>
+    <button class="action-btn green"  onclick="doAct('clap')">👏 Clap</button>
+    <button class="action-btn purple" onclick="doAct('dance')">💃 Dance</button>
+    <button class="action-btn blue"   onclick="doAct('greet')">🙏 Greet</button>
+    <button class="action-btn teal"   onclick="doAct('nod')">✅ Nod Yes</button>
+    <button class="action-btn"        onclick="doAct('shake')">❌ Shake No</button>
+    <button class="action-btn purple" onclick="doAct('think')">🤔 Think</button>
+    <button class="action-btn green"  onclick="doAct('grab')">🤏 Grab</button>
+    <button class="action-btn blue"   onclick="doAct('give')">🤲 Give</button>
+    <button class="action-btn pink"   onclick="showMusicModal()">🎵 Play Music</button>
+    <button class="action-btn teal"   onclick="showGameModal()">🎮 Game Mode</button>
+    <button class="action-btn red"    onclick="doAct('reset')">🔄 Reset All</button>
+  </div>
+</div>
+
+<!-- System Log -->
+<div class="card">
+  <div class="card-title">▸ System Log</div>
+  <div class="log-box" id="sysLog"></div>
+</div>
+
+<!-- Robot Status -->
+<div class="card">
+  <div class="card-title">▸ Robot Status</div>
+  <div class="status-display" id="statusDisplay">READY</div>
+</div>
+
+</div><!-- end .container -->
+
+<!-- Music Modal -->
+<div class="modal" id="musicModal"><div class="modal-box">
+  <div class="modal-title">◈ CHOOSE A SONG</div>
+  <button class="song-btn" onclick="playSong(1)">🎮 Pacman — Airtel Tone</button>
+  <button class="song-btn" onclick="playSong(2)">🍄 Mario Theme — Docomo Tone</button>
+  <button class="song-btn" onclick="playSong(3)">⚔️ Game of Thrones Theme</button>
+  <button class="song-btn" onclick="playSong(4)">🛹 Subway Surfers Theme</button>
+  <button class="song-btn" onclick="playSong(5)">🚗 Tokyo Drift Theme</button>
+  <button class="close-btn" onclick="closeMusicModal()">Cancel</button>
+</div></div>
+
+<!-- Game Select Modal -->
+<div class="modal" id="gameModal"><div class="modal-box">
+  <div class="modal-title">◈ SELECT DIFFICULTY</div>
+  <button class="diff-btn" style="background:linear-gradient(135deg,#2e7d32,#43a047)" onclick="startGame(1)">🟢 Easy — Relaxed Speed</button>
+  <button class="diff-btn" style="background:linear-gradient(135deg,#ff6f00,#ffa000)" onclick="startGame(2)">🟡 Medium — Normal Speed</button>
+  <button class="diff-btn" style="background:linear-gradient(135deg,#b71c1c,#e53935)" onclick="startGame(3)">🔴 Hard — Fast Speed</button>
+  <button class="close-btn" onclick="closeGameModal()">Cancel</button>
+</div></div>
+
+<!-- Game Play Modal -->
+<div class="modal" id="gamePlayModal"><div class="modal-box" style="text-align:center">
+  <div class="modal-title" id="gameScoreDisplay">SCORE: 0</div>
+  <button class="jump-btn" onclick="gameJump()">⬆ JUMP!</button>
+  <div style="margin-top:12px;font-size:13px;color:var(--muted)">Press JUMP to leap over obstacles!</div>
+  <button class="close-btn" style="margin-top:12px" onclick="quitGame()">Quit Game</button>
+</div></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  GLOBALS
+// ═══════════════════════════════════════════════════════════════════════
+let robotBase = "";
+let geminiKey = "";
+let activeEmoji = 0;
+let gameActive = false, scoreInterval = null;
+let chatHistory = [];
+let lastLocalReply = "";
+
+// Camera
+let camStream = null, isFrozen = false;
+
+// Voice
+let recognition = null, isListening = false;
+let lastTranscript = "";
+
+// ═══════════════════════════════════════════════════════════════════════
+//  TEXT-TO-SPEECH  (plays through phone/laptop speaker)
+// ═══════════════════════════════════════════════════════════════════════
+let femaleVoice = null;
+
+function loadVoices() {
+  const voices = window.speechSynthesis.getVoices();
+  femaleVoice =
+    voices.find(v => v.name.includes("Google US English")) ||
+    voices.find(v => v.name.includes("Microsoft Zira")) ||
+    voices.find(v => v.name.includes("Samantha")) ||
+    voices.find(v => v.lang === "en-US" && v.name.toLowerCase().includes("female")) ||
+    voices.find(v => v.lang === "en-US") ||
+    voices.find(v => v.lang.startsWith("en"));
+}
+loadVoices();
+if (window.speechSynthesis.onvoiceschanged !== undefined)
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+
+function speak(text, showIndicator = true) {
+  window.speechSynthesis.cancel();
+  if (!femaleVoice) loadVoices();
+  const u = new SpeechSynthesisUtterance(text);
+  if (femaleVoice) u.voice = femaleVoice;
+  u.rate = 1.05; u.pitch = 1.1; u.volume = 1.0;
+  if (showIndicator) {
+    document.getElementById("speakingIndicator").style.display = "inline";
+    u.onend = () => document.getElementById("speakingIndicator").style.display = "none";
+  }
+  window.speechSynthesis.speak(u);
+}
+
+function speakLocal(text) {
+  window.speechSynthesis.cancel();
+  if (!femaleVoice) loadVoices();
+  const u = new SpeechSynthesisUtterance(text);
+  if (femaleVoice) u.voice = femaleVoice;
+  u.rate = 1.05; u.pitch = 1.1; u.volume = 1.0;
+  const dot = document.getElementById("localSpeakingDot");
+  dot.style.display = "inline";
+  u.onend = () => dot.style.display = "none";
+  window.speechSynthesis.speak(u);
+}
+
+function speakAgain() {
+  if (lastLocalReply) speakLocal(lastLocalReply);
+}
+
+function setMicText(text) {
+  document.getElementById("micTranscript").innerText = text;
+  lastTranscript = text;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  LOGGING
+// ═══════════════════════════════════════════════════════════════════════
+function sysLog(msg, type = "info") {
+  const el = document.getElementById("sysLog");
+  const colors = { info: "#546e7a", ok: "#00e676", err: "#ff5252", ai: "#00e5ff", warn: "#ffd740" };
+  const c = colors[type] || "#546e7a";
+  const t = new Date().toLocaleTimeString().split(' ')[0];
+  el.innerHTML = `<div style="color:${c}"><span style="opacity:0.4">[${t}]</span> ${msg}</div>` + el.innerHTML;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CONNECTION
+// ═══════════════════════════════════════════════════════════════════════
+function connectRobot() {
+  let ip = document.getElementById("robotIP").value.trim();
+  geminiKey = document.getElementById("gemKey").value.trim();
+  if (!ip) { sysLog("Enter robot IP address", "err"); return; }
+  if (!ip.startsWith("http")) ip = "http://" + ip;
+  robotBase = ip.replace(/\/$/, "");
+  sysLog("Connecting to " + robotBase + "...");
+  fetchStatus();
+}
+
+async function fetchStatus() {
+  if (!robotBase) { sysLog("Not connected", "warn"); return; }
+  try {
+    const r = await fetch(robotBase + "/api/status");
+    if (r.ok) {
+      const j = await r.json();
+      document.getElementById("statusDisplay").innerText = j.action || "READY";
+      if (j.emojiMode !== activeEmoji) {
+        activeEmoji = j.emojiMode;
+        for (let i = 1; i <= 10; i++) {
+          const b = document.getElementById("em" + i);
+          if (b) b.classList.remove("active");
+        }
+        if (j.emojiMode > 0) {
+          const b = document.getElementById("em" + j.emojiMode);
+          if (b) b.classList.add("active");
+        }
+      }
+      const badge = document.getElementById("connBadge");
+      badge.innerText = "CONNECTED · " + (j.ip || robotBase);
+      badge.className = "conn-badge connected";
+    } else throw new Error("HTTP " + r.status);
+  } catch (e) {
+    const badge = document.getElementById("connBadge");
+    badge.innerText = "CONNECTION FAILED";
+    badge.className = "conn-badge error";
+    sysLog("Status error: " + e.message, "err");
+  }
+}
+setInterval(fetchStatus, 2000);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  JOYSTICK
+// ═══════════════════════════════════════════════════════════════════════
+const joy = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+let isDragging = false, centerX, centerY, maxRadius, stickRadius;
+let currentCommand = "STOP", commandInterval = null;
+
+function updateJoystickDimensions() {
+  const jw = joy.offsetWidth;
+  centerX = jw / 2; centerY = jw / 2;
+  maxRadius = jw / 2 - 35; stickRadius = stick.offsetWidth / 2;
+  stick.style.left = (centerX - stickRadius) + "px";
+  stick.style.top = (centerY - stickRadius) + "px";
+}
+updateJoystickDimensions();
+window.addEventListener("resize", updateJoystickDimensions);
+
+function sendCmd(cmd) {
+  if (cmd !== currentCommand) {
+    currentCommand = cmd;
+    if (robotBase) fetch(robotBase + "/cmd?dir=" + cmd).catch(() => {});
+  }
+}
+function startCommandLoop() {
+  if (commandInterval) clearInterval(commandInterval);
+  commandInterval = setInterval(() => {
+    if (isDragging && currentCommand !== "STOP")
+      fetch(robotBase + "/cmd?dir=" + currentCommand).catch(() => {});
+  }, 200);
+}
+function stopCommandLoop() { if (commandInterval) { clearInterval(commandInterval); commandInterval = null; } }
+function moveStick(x, y) {
+  let dx = x - centerX, dy = y - centerY, dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > maxRadius) { dx = dx * maxRadius / dist; dy = dy * maxRadius / dist; dist = maxRadius; }
+  stick.style.left = (centerX + dx - stickRadius) + "px";
+  stick.style.top = (centerY + dy - stickRadius) + "px";
+  const dz = maxRadius * 0.25;
+  if (dist < dz) { sendCmd("STOP"); }
+  else {
+    const a = Math.atan2(dy, dx);
+    if (a >= -Math.PI / 4 && a < Math.PI / 4) sendCmd("RIGHT");
+    else if (a >= Math.PI / 4 && a < 3 * Math.PI / 4) sendCmd("BACK");
+    else if (a >= 3 * Math.PI / 4 || a < -3 * Math.PI / 4) sendCmd("LEFT");
+    else sendCmd("FORWARD");
+  }
+}
+function resetStick() {
+  stick.style.left = (centerX - stickRadius) + "px";
+  stick.style.top = (centerY - stickRadius) + "px";
+  sendCmd("STOP"); stopCommandLoop();
+}
+joy.addEventListener("mousedown", () => { isDragging = true; startCommandLoop(); });
+joy.addEventListener("touchstart", () => { isDragging = true; startCommandLoop(); }, { passive: true });
+document.addEventListener("mouseup", () => { if (isDragging) { isDragging = false; resetStick(); } });
+document.addEventListener("touchend", () => { if (isDragging) { isDragging = false; resetStick(); } });
+document.addEventListener("mousemove", e => { if (isDragging) { const r = joy.getBoundingClientRect(); moveStick(e.clientX - r.left, e.clientY - r.top); } });
+joy.addEventListener("touchmove", e => { e.preventDefault(); if (isDragging) { const r = joy.getBoundingClientRect(); moveStick(e.touches[0].clientX - r.left, e.touches[0].clientY - r.top); } }, { passive: false });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BUILT-IN Q&A KNOWLEDGE BASE  (all from CognoSpace QA Guide + training)
+//  Returns: { text, action, servo, buzzer, tags }
+// ═══════════════════════════════════════════════════════════════════════
+function localKnowledgeBase(input) {
+  const inp = input.toLowerCase().trim();
+
+  // Helper: check if any keyword exists in the input
+  const has = (...words) => words.some(w => inp.includes(w));
+
+  // ── GREETINGS ───────────────────────────────────────────────────────
+  if (has("good morning"))
+    return { text: "Good morning! Let's learn about robotics and STEM together! I'm so excited to teach you today!", action: "greet", tags: ["action"] };
+  if (has("good afternoon"))
+    return { text: "Good afternoon! Hope your day is going great! Let's explore some exciting robotics concepts!", action: "greet", tags: ["action"] };
+  if (has("good evening"))
+    return { text: "Good evening! Perfect time to learn about STEM and robotics with CognoSpace!", action: "greet", tags: ["action"] };
+  if (has("hi", "hello", "hey", "hii", "hola"))
+    return { text: "Hello! I'm your CognoSpace humanoid robot. Welcome! How can I help you learn STEM and robotics today?", action: "greet", tags: ["action"] };
+
+  // ── FAREWELLS ────────────────────────────────────────────────────────
+  if (has("bye", "goodbye", "see you", "good night", "cya"))
+    return { text: "Goodbye! Keep learning and exploring robotics! See you soon! CognoSpace believes in you!", action: "wave", tags: ["action"] };
+
+  // ── ABOUT ROBOT ──────────────────────────────────────────────────────
+  if (has("who are you", "your name", "what are you", "introduce yourself", "tell me about yourself"))
+    return { text: "I'm a humanoid robot designed by CognoSpace to teach STEM and robotics! I have servos, motors, an LCD, OLED eyes, and a buzzer. I was built by the CognoSpace R&D team to make learning fun!", action: "wave", tags: ["action"] };
+  if (has("how are you", "are you okay", "how do you feel"))
+    return { text: "I'm functioning perfectly! All my servo motors and sensors are working great! My ESP32 brain is happy and my OLED eyes are shining!", action: "nod", tags: ["action"] };
+
+  // ── COGNOSPACE ───────────────────────────────────────────────────────
+  if (has("what is cognospace", "about cognospace", "tell me about cognospace", "cognospace"))
+    return { text: "CognoSpace provides experiential learning with activity-based STEM education! We partner with schools across India to make science, technology, engineering, and mathematics fun and hands-on!", tags: ["qa"] };
+  if (has("founder", "santosh ballu", "who founded", "who created cognospace", "who built cognospace"))
+    return { text: "CognoSpace was founded by Santosh Ballu, a BITS Pilani alumni, with a vision to revolutionize STEM education in India through hands-on experiential learning!", tags: ["qa"] };
+  if (has("where is cognospace", "location", "address", "where are you from", "where is the company"))
+    return { text: "CognoSpace is located in Kondapur, Hyderabad! We partner with schools across India to deliver our STEM education programs!", tags: ["qa"] };
+
+  // ── STEM TOPICS ──────────────────────────────────────────────────────
+  if (has("what is stem", "explain stem", "define stem"))
+    return { text: "STEM stands for Science, Technology, Engineering, and Mathematics! It's an integrated approach to learning that prepares students for the future! CognoSpace makes STEM hands-on and exciting!", tags: ["qa"] };
+  if (has("what is robotics", "explain robotics", "define robotics", "robotics"))
+    return { text: "Robotics is the field of designing, building, and programming robots to solve real-world problems! It combines mechanical engineering, electronics, and computer science. I am a perfect example of robotics!", tags: ["qa"] };
+  if (has("arduino", "microcontroller"))
+    return { text: "Arduino is a popular open-source microcontroller platform used for building electronic projects! It's beginner-friendly and perfect for learning hardware programming. My brain uses an ESP32, which is even more powerful!", tags: ["qa"] };
+  if (has("python", "programming language"))
+    return { text: "Python is a beginner-friendly programming language widely used for AI, machine learning, and robotics! Its simple syntax makes it perfect for students just starting their coding journey!", tags: ["qa"] };
+  if (has("artificial intelligence", " ai ", "what is ai", "machine learning", "ml"))
+    return { text: "Artificial Intelligence, or AI, makes machines smart enough to learn, think, and make decisions! AI powers everything from voice assistants to self-driving cars. CognoSpace teaches AI concepts through hands-on projects!", tags: ["qa"] };
+  if (has("iot", "internet of things", "smart device"))
+    return { text: "IoT, or Internet of Things, connects devices to the internet for smart automation and control! Think smart homes, wearable devices, and connected factories. It's one of the most exciting fields in tech!", tags: ["qa"] };
+  if (has("3d print", "3d printing", "additive manufacturing"))
+    return { text: "3D printing creates physical objects from digital designs layer by layer! It's revolutionizing manufacturing, medicine, and education. CognoSpace uses 3D printing to prototype robot parts!", tags: ["qa"] };
+  if (has("drone", "uav", "quadcopter"))
+    return { text: "Drones are unmanned aerial vehicles! At CognoSpace, you learn drone technology, programming, and flight control through exciting hands-on drone projects! Drones are used in agriculture, delivery, and surveillance.", tags: ["qa"] };
+  if (has("sensor", "how robots see", "robot senses"))
+    return { text: "Sensors help robots see, hear, and feel their environment just like humans do! Ultrasonic sensors detect distance, IR sensors detect obstacles, and cameras provide vision. I have multiple sensors onboard!", tags: ["qa"] };
+  if (has("career", "job", "future", "profession", "scope"))
+    return { text: "Robotics opens doors to amazing careers like AI engineer, robot designer, automation specialist, drone pilot, and IoT developer! STEM skills are the most in-demand skills of the 21st century!", tags: ["qa"] };
+
+  // ── ANATOMY / COMPONENTS ─────────────────────────────────────────────
+  if (has("anatomy", "component", "parts", "made of", "inside you", "your body", "hardware", "built"))
+    return { text: "I have 10 main hardware parts: 1. ESP32 brain, 2. Motor Driver, 3. 60RPM Motors, 4. MG995 Servos, 5. LCD Display, 6. OLED Eyes, 7. Buzzer, 8. Battery, 9. Wheels, and 10. Chassis. Want me to also explain each one in detail?", action: "anatomy", tags: ["action", "qa"] };
+  if (has("esp32", "brain", "wifi chip", "microchip"))
+    return { text: "The ESP32 is my brain! It was programmed by the CognoSpace R&D team. It has built-in WiFi and Bluetooth, runs at 240MHz, and controls everything — from my motors to my OLED eyes!", tags: ["qa"] };
+  if (has("motor driver", "l298", "h bridge"))
+    return { text: "The Motor Driver is like a traffic police officer for my wheels! It controls the speed and direction of my 60RPM DC motors. Without it, I can't move!", tags: ["qa"] };
+  if (has("servo", "mg995", "servo motor", "arm"))
+    return { text: "I have 5 MG995 servo motors! One controls my head rotation, two control my left arm shoulder and elbow, and two control my right arm shoulder and elbow. They let me wave, dance, nod, and express myself!", tags: ["qa"] };
+  if (has("lcd", "display", "screen", "text screen"))
+    return { text: "My LCD is a 20x4 character display — that's the screen showing messages right now! It shows my responses, status, and even has a mini runner game. It's how I communicate with you!", tags: ["qa"] };
+  if (has("oled", "eye", "oled eye", "oled screen"))
+    return { text: "I have OLED screen eyes that blink and show emotions! They can display happy, angry, sad, love, wink, surprised, and many more expressions. They make me look alive and expressive!", tags: ["qa"] };
+  if (has("buzzer", "speaker", "sound", "music", "tone"))
+    return { text: "My buzzer is my voice! It plays melodies like Pacman, Mario, Game of Thrones, and more. It also beeps to acknowledge commands. I'm a little rockstar! 🎵", buzzer: true, tags: ["buzzer", "qa"] };
+  if (has("battery", "power", "charge", "energy"))
+    return { text: "My battery is my energy source — like my tummy! Without it, all my servos, motors, and brain would go to sleep. I run on a rechargeable battery pack.", tags: ["qa"] };
+  if (has("wheel", "feet", "move", "rolling"))
+    return { text: "My wheels are like my feet! They're driven by 60RPM DC motors through the motor driver. They let me move forward, backward, left, and right!", tags: ["qa"] };
+  if (has("chassis", "body", "frame", "skeleton", "structure"))
+    return { text: "My chassis is my skeleton! It holds all my components together — motors, servos, batteries, and circuit boards. It's the backbone that gives me my humanoid shape!", tags: ["qa"] };
+
+  // ── ACTIONS / ENTERTAINMENT ──────────────────────────────────────────
+  if (has("dance", "groove", "boogie"))
+    return { text: "Yes! I love to dance! Watch me show some cool moves with my arms and body!", action: "dance", tags: ["action"] };
+  if (has("wave", "wave hand", "say hello"))
+    return { text: "Sure! I'll wave at you! Hello everyone! 👋", action: "wave", tags: ["action"] };
+  if (has("clap", "applaud", "bravo"))
+    return { text: "Yay! Let me clap for you! Great job! 👏", action: "clap", tags: ["action"] };
+  if (has("nod", "say yes", "agree", "nod head"))
+    return { text: "Yes, I agree! Let me nod my head!", action: "nod", tags: ["action"] };
+  if (has("shake head", "say no", "disagree", "shake no"))
+    return { text: "No no! I disagree! Watch me shake my head!", action: "shake", tags: ["action"] };
+  if (has("think", "thinking", "ponder"))
+    return { text: "Hmm... let me think about that! 🤔", action: "think", tags: ["action"] };
+  if (has("greet", "greeting", "welcome"))
+    return { text: "Welcome to CognoSpace! Let me greet you properly!", action: "greet", tags: ["action"] };
+
+  // ── SERVO-SPECIFIC VOICE COMMANDS ───────────────────────────────────
+  if (has("raise right hand", "lift right hand", "right hand up", "right arm up"))
+    return { text: "Raising my right arm for you!", servo: { name: "rh1", pos: 0 }, tags: ["servo"] };
+  if (has("lower right hand", "right hand down", "right arm down"))
+    return { text: "Lowering my right arm!", servo: { name: "rh1", pos: 90 }, tags: ["servo"] };
+  if (has("raise left hand", "lift left hand", "left hand up", "left arm up"))
+    return { text: "Raising my left arm for you!", servo: { name: "lh1", pos: 180 }, tags: ["servo"] };
+  if (has("lower left hand", "left hand down", "left arm down"))
+    return { text: "Lowering my left arm!", servo: { name: "lh1", pos: 90 }, tags: ["servo"] };
+  if (has("turn head left", "look left", "head left"))
+    return { text: "Turning my head to the left!", servo: { name: "head", pos: 30 }, tags: ["servo"] };
+  if (has("turn head right", "look right", "head right"))
+    return { text: "Turning my head to the right!", servo: { name: "head", pos: 150 }, tags: ["servo"] };
+  if (has("center head", "look forward", "head center", "head straight"))
+    return { text: "Centering my head to look forward!", servo: { name: "head", pos: 90 }, tags: ["servo"] };
+  if (has("both hands up", "raise both hands", "hands up"))
+    return { text: "Raising both my arms up!", servo: "both_up", tags: ["servo"] };
+  if (has("both hands down", "lower both hands", "hands down"))
+    return { text: "Lowering both my arms!", servo: "both_down", tags: ["servo"] };
+
+  // ── MUSIC VOICE ──────────────────────────────────────────────────────
+  if (has("play pacman", "pacman", "airtel tone"))
+    return { text: "Playing Pacman theme on my buzzer! 🎮", music: 1, tags: ["buzzer"] };
+  if (has("play mario", "mario", "docomo"))
+    return { text: "It's-a me, Mario! Playing the Mario theme! 🍄", music: 2, tags: ["buzzer"] };
+  if (has("game of thrones", "got theme", "winter is coming"))
+    return { text: "Winter is coming! Playing Game of Thrones theme! ⚔️", music: 3, tags: ["buzzer"] };
+  if (has("subway surfers", "subway"))
+    return { text: "Keep running! Playing Subway Surfers theme! 🛹", music: 4, tags: ["buzzer"] };
+  if (has("tokyo drift", "fast and furious", "tokyo"))
+    return { text: "Drift time! Playing Tokyo Drift theme! 🚗", music: 5, tags: ["buzzer"] };
+  if (has("play song", "play music", "music"))
+    return { text: "I can play Pacman, Mario, Game of Thrones, Subway Surfers, or Tokyo Drift! Which one would you like? 🎵", tags: ["buzzer"] };
+
+  // ── JOKES & FUN ──────────────────────────────────────────────────────
+  if (has("joke", "funny", "laugh", "tell me a joke", "make me laugh"))
+    return { text: "Why did the robot go to school? To improve its AI! Haha! 😄 Here's another: Why do robots make great employees? Because they never crash... unless you reboot them wrong!", action: "clap", tags: ["action"] };
+  if (has("thank", "thanks", "thank you", "thx", "appreciate"))
+    return { text: "You're welcome! Happy to help you learn and explore robotics! That's what I'm here for!", action: "nod", tags: ["action"] };
+
+  // ── RESET ────────────────────────────────────────────────────────────
+  if (has("reset", "restart", "stop everything", "reset all"))
+    return { text: "Resetting all my systems! Back to ready position.", action: "reset", tags: ["action"] };
+
+  // ── FEATURES ────────────────────────────────────────────────────────
+  if (has("what can you do", "your abilities", "your features", "capabilities"))
+    return { text: "I can move forward, backward, left, and right! I can wave, dance, clap, nod, shake my head, grab and give objects, play music on my buzzer, show expressions on my OLED eyes, and answer STEM questions! I'm a complete learning companion!", tags: ["qa"] };
+
+  // ── DEFAULT ──────────────────────────────────────────────────────────
+  return {
+    text: "That's an interesting question! I'm trained to answer questions about CognoSpace, STEM, robotics, Arduino, Python, AI, IoT, 3D printing, drones, sensors, and careers. Try asking me about any of those topics! I'm also happy to wave, dance, clap, or play music!",
+    tags: ["qa"]
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  LOCAL MESSAGE HANDLER  (Talk to Robot section)
+// ═══════════════════════════════════════════════════════════════════════
+async function sendMsg() {
+  const m = document.getElementById("msg").value.trim();
+  if (!m) return;
+
+  const result = localKnowledgeBase(m);
+  const replyText = result.text;
+  lastLocalReply = replyText;
+
+  // Show in UI
+  document.getElementById("localResp").innerText = replyText;
+  document.getElementById("speakAgainBtn").style.display = "block";
+
+  // ── Speak through speaker ────────────────────────────────────────────
+  speakLocal(replyText);
+
+  // ── Send to robot LCD ────────────────────────────────────────────────
+  if (robotBase) {
+    fetch(robotBase + "/api/message?text=" + encodeURIComponent(m)).catch(() => {});
+  }
+
+  // ── Execute action ───────────────────────────────────────────────────
+  if (result.action) {
+    if (result.action === "anatomy") {
+      // Handled on robot side by /api/message
+    } else if (robotBase) {
+      setTimeout(() => {
+        fetch(robotBase + "/api/action?type=" + result.action).catch(() => {});
+      }, 600);
+    }
+    sysLog("Local Q&A + action: " + result.action, "ok");
+  }
+
+  // ── Execute servo command ────────────────────────────────────────────
+  if (result.servo) {
+    if (result.servo === "both_up") {
+      setSv("rh1", 0); setSv("lh1", 180);
+    } else if (result.servo === "both_down") {
+      setSv("rh1", 90); setSv("lh1", 90);
+    } else {
+      setSv(result.servo.name, result.servo.pos);
+    }
+    sysLog("Servo command: " + JSON.stringify(result.servo), "ok");
+  }
+
+  // ── Trigger music ────────────────────────────────────────────────────
+  if (result.music && robotBase) {
+    setTimeout(() => playSong(result.music), 800);
+  }
+
+  document.getElementById("msg").value = "";
+  sysLog("Q&A: " + m.substring(0, 40), "ok");
+}
+
+document.getElementById("msg").addEventListener("keypress", e => { if (e.key === "Enter") sendMsg(); });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DISPLAY ON LCD
+// ═══════════════════════════════════════════════════════════════════════
+function sendDisplay() {
+  const t = document.getElementById("dispMsg").value.trim();
+  if (t && robotBase) {
+    fetch(robotBase + "/api/display?text=" + encodeURIComponent(t)).then(() => {
+      document.getElementById("dispMsg").value = "";
+      sysLog("Display sent: " + t, "ok");
+    }).catch(e => sysLog("Display error: " + e.message, "err"));
+  }
+}
+document.getElementById("dispMsg").addEventListener("keypress", e => { if (e.key === "Enter") sendDisplay(); });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SERVO CONTROLS
+// ═══════════════════════════════════════════════════════════════════════
+function setSv(sv, pos) {
+  const ids = { head: "hVal", lh1: "l1Val", lh2: "l2Val", rh1: "r1Val", rh2: "r2Val" };
+  if (ids[sv]) document.getElementById(ids[sv]).innerText = pos + "°";
+  if (robotBase) fetch(robotBase + "/api/servo?name=" + sv + "&pos=" + pos).catch(() => {});
+  sysLog("Servo " + sv + " → " + pos + "°", "ok");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════════════════════════
+function doAct(act) {
+  if (robotBase) {
+    fetch(robotBase + "/api/action?type=" + act)
+      .then(() => sysLog("Action: " + act, "ok"))
+      .catch(e => sysLog("Action error: " + e.message, "err"));
+  } else {
+    sysLog("Not connected — connect robot first", "warn");
+  }
+}
+
+function setEmoji(n) {
+  activeEmoji = n;
+  for (let i = 1; i <= 10; i++) {
+    const b = document.getElementById("em" + i);
+    if (b) b.classList.remove("active");
+  }
+  if (n > 0) {
+    const b = document.getElementById("em" + n);
+    if (b) b.classList.add("active");
+  }
+  if (robotBase) fetch(robotBase + "/api/emoji?mode=" + n).catch(() => {});
+}
+
+// ── Music & Game ──────────────────────────────────────────────────────
+function showMusicModal() { document.getElementById("musicModal").classList.add("show"); }
+function closeMusicModal() { document.getElementById("musicModal").classList.remove("show"); }
+function playSong(n) { closeMusicModal(); if (robotBase) fetch(robotBase + "/api/music?song=" + n).catch(() => {}); sysLog("Playing song " + n, "ok"); }
+function showGameModal() { document.getElementById("gameModal").classList.add("show"); }
+function closeGameModal() { document.getElementById("gameModal").classList.remove("show"); }
+function startGame(diff) {
+  closeGameModal();
+  if (!robotBase) { sysLog("Not connected", "err"); return; }
+  gameActive = true;
+  document.getElementById("gameScoreDisplay").innerText = "SCORE: 0";
+  document.getElementById("gamePlayModal").classList.add("show");
+  fetch(robotBase + "/api/game/start?difficulty=" + diff).catch(() => {});
+  scoreInterval = setInterval(() => {
+    fetch(robotBase + "/api/status").then(r => r.json()).then(d => {
+      document.getElementById("gameScoreDisplay").innerText = "SCORE: " + d.action.replace("Game Running", "...");
+      if (d.action === "Ready" && gameActive) { gameActive = false; clearInterval(scoreInterval); document.getElementById("gamePlayModal").classList.remove("show"); }
+    }).catch(() => {});
+  }, 500);
+}
+function gameJump() { if (gameActive && robotBase) fetch(robotBase + "/api/game/jump").catch(() => {}); }
+function quitGame() {
+  gameActive = false; if (scoreInterval) clearInterval(scoreInterval);
+  document.getElementById("gamePlayModal").classList.remove("show");
+  if (robotBase) fetch(robotBase + "/api/action?type=reset").catch(() => {});
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CAMERA
+// ═══════════════════════════════════════════════════════════════════════
+async function toggleCamera() {
+  const vid = document.getElementById("camPreview");
+  if (camStream) {
+    camStream.getTracks().forEach(t => t.stop()); camStream = null;
+    vid.srcObject = null;
+    document.getElementById("camCanvas").style.display = "none";
+    vid.style.display = "block";
+    document.getElementById("btnFreeze").disabled = true;
+    document.getElementById("btnCamToggle").classList.remove("active");
+    sysLog("Camera off", "info");
+  } else {
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      vid.srcObject = camStream;
+      document.getElementById("btnFreeze").disabled = false;
+      document.getElementById("btnCamToggle").classList.add("active");
+      sysLog("Camera on", "ok");
+    } catch (e) { sysLog("Camera error: " + e.message, "err"); }
+  }
+}
+function freezeCamera() {
+  if (!camStream) return;
+  const cvs = document.getElementById("camCanvas"), vid = document.getElementById("camPreview");
+  cvs.width = vid.videoWidth; cvs.height = vid.videoHeight;
+  cvs.getContext("2d").drawImage(vid, 0, 0);
+  vid.style.display = "none"; cvs.style.display = "block";
+  isFrozen = true;
+  document.getElementById("btnFreeze").disabled = true;
+  document.getElementById("btnRetake").style.display = "inline-block";
+  sysLog("Frame frozen", "info");
+}
+function retakeCamera() {
+  document.getElementById("camPreview").style.display = "block";
+  document.getElementById("camCanvas").style.display = "none";
+  isFrozen = false;
+  document.getElementById("btnFreeze").disabled = false;
+  document.getElementById("btnRetake").style.display = "none";
+}
+async function analyzeVisionCustom() {
+  const q = document.getElementById("visionQ").value.trim();
+  if (!q) { sysLog("Enter a vision question", "warn"); return; }
+  analyzeVision(false, q);
+}
+async function analyzeVision(isCommand, customPrompt) {
+  if (!camStream && !isFrozen) { sysLog("Camera is off", "warn"); return; }
+  if (!geminiKey) { sysLog("Enter Gemini API key", "err"); return; }
+  let base64 = "";
+  if (isFrozen) {
+    base64 = document.getElementById("camCanvas").toDataURL("image/jpeg").split(",")[1];
+  } else {
+    const cvs = document.createElement("canvas"), vid = document.getElementById("camPreview");
+    cvs.width = vid.videoWidth; cvs.height = vid.videoHeight;
+    cvs.getContext("2d").drawImage(vid, 0, 0);
+    base64 = cvs.toDataURL("image/jpeg").split(",")[1];
+  }
+  sysLog("Analyzing image...", "info");
+  const p = customPrompt || (isCommand ? "Describe what you see and provide robot movement commands to navigate safely." : "Describe this image briefly in one sentence.");
+  try {
+    const ai = await callGemini(p, base64, false);
+    const reply = typeof ai === "string" ? ai : (ai.response || "...");
+    sysLog("Vision: " + reply, "ai");
+    document.getElementById("aiResponse").innerText = reply;
+    speak(reply);
+    if (robotBase) fetch(robotBase + "/api/display?text=" + encodeURIComponent(reply)).catch(() => {});
+    const move = detectMovementIntent(reply);
+    if (move && isCommand) voiceMove(move, reply);
+  } catch (e) { sysLog("Vision error: " + e.message, "err"); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GEMINI AI — Enhanced with full servo/action/buzzer control
+// ═══════════════════════════════════════════════════════════════════════
+const AI_MODEL = "gemini-2.5-flash-lite";
+
+async function callGemini(text, b64, includeHistory) {
+  if (!geminiKey) throw new Error("No Gemini API key");
+  const histBlock = (includeHistory && chatHistory.length) ? "HISTORY:\n" + chatHistory.join("\n") : "";
+
+  const systemPrompt = `You are the AI brain of a CognoSpace humanoid robot built in Hyderabad, India.
+You control a physical robot with: movement motors, 5 servo motors (head, left shoulder L1, left elbow L2, right shoulder R1, right elbow R2), a buzzer, and an LCD display.
+
+=== RESPONSE RULES ===
+1. Keep responses SHORT (under 25 words) for the LCD display.
+2. ALWAYS include cmd, servos, action, and music fields in your JSON.
+3. For greetings/questions, respond warmly and educationally.
+4. Robot was built by CognoSpace — an experiential STEM learning company in Kondapur, Hyderabad. Founded by Santosh Ballu (BITS Pilani alumni).
+
+=== MOVEMENT DETECTION ===
+"go forward"/"move forward" → cmd: FORWARD
+"go back"/"reverse" → cmd: BACK
+"turn left"/"go left" → cmd: LEFT
+"turn right"/"go right" → cmd: RIGHT
+"stop"/"halt" → cmd: STOP
+No movement → cmd: NONE
+
+=== SERVO DETECTION ===
+"raise right hand"/"right arm up" → {rh1: 0}
+"lower right hand"/"right arm down" → {rh1: 90}
+"raise left hand"/"left arm up" → {lh1: 180}
+"lower left hand"/"left arm down" → {lh1: 90}
+"turn head left"/"look left" → {head: 30}
+"turn head right"/"look right" → {head: 150}
+"center head" → {head: 90}
+"both hands up" → {rh1: 0, lh1: 180}
+No servo change → servos: {}
+
+=== ACTION DETECTION ===
+"wave" → action: wave
+"dance"/"groove" → action: dance
+"clap"/"applaud" → action: clap
+"greet"/"welcome" → action: greet
+"nod"/"yes"/"agree" → action: nod
+"shake head"/"no"/"disagree" → action: shake
+"think"/"ponder" → action: think
+No action → action: none
+
+=== MUSIC DETECTION ===
+"pacman"/"airtel" → music: 1
+"mario"/"docomo" → music: 2
+"game of thrones"/"got" → music: 3
+"subway surfers" → music: 4
+"tokyo drift" → music: 5
+No music → music: 0
+
+${histBlock}
+
+USER: "${text}"
+
+Respond ONLY as valid JSON (no markdown):
+{"response":"short reply text","cmd":"FORWARD|BACK|LEFT|RIGHT|STOP|NONE","servos":{"head":90,"lh1":90,"lh2":180,"rh1":90,"rh2":180},"action":"wave|dance|clap|greet|nod|shake|think|reset|none","music":0}`;
+
+  const parts = [{ text: systemPrompt }];
+  if (b64) parts.push({ inline_data: { mime_type: "image/jpeg", data: b64 } });
+
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${geminiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: parts }] })
+  });
+  const json = await r.json();
+  if (json.error) throw new Error(json.error.message);
+  const raw = json.candidates[0].content.parts[0].text;
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      return JSON.parse(match[0]);
+    } catch (e) {}
+  }
+  return { response: raw, cmd: "NONE", servos: {}, action: "none", music: 0 };
+}
+
+// ─── Send to AI (Voice + AI Brain section) ────────────────────────────
+async function sendToAI() {
+  const txt = lastTranscript || document.getElementById("micTranscript").innerText;
+  if (!txt || txt.includes("Tap mic")) { sysLog("No voice input", "warn"); return; }
+
+  // First check local KB for instant answer
+  const local = localKnowledgeBase(txt);
+
+  if (!geminiKey) {
+    // Fully offline — use local KB
+    document.getElementById("aiResponse").innerText = local.text;
+    speak(local.text);
+    showAITags(local.tags || []);
+    sysLog("Offline mode — using built-in KB", "info");
+    executeLocalResult(local, txt);
+    return;
+  }
+
+  const btn = document.getElementById("aiSendBtn");
+  btn.disabled = true; btn.innerText = "Thinking...";
+
+  try {
+    const result = await callGemini(txt, null, true);
+    const reply = typeof result === "string" ? result : (result.response || "...");
+    const cmd = typeof result === "object" ? result.cmd : "NONE";
+    const servos = (typeof result === "object" && result.servos) ? result.servos : {};
+    const action = typeof result === "object" ? result.action : "none";
+    const music = typeof result === "object" ? result.music : 0;
+
+    document.getElementById("aiResponse").innerText = reply;
+    speak(reply);
+    sysLog("AI: " + reply, "ai");
+
+    chatHistory.push("User: " + txt);
+    chatHistory.push("AI: " + reply);
+    if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
+
+    // Show tags based on what's being executed
+    const tags = [];
+    if (cmd !== "NONE") tags.push("motor");
+    if (Object.keys(servos).length > 0) tags.push("servo");
+    if (action && action !== "none") tags.push("action");
+    if (music > 0) tags.push("buzzer");
+    tags.push("qa");
+    showAITags(tags);
+
+    // Send reply to robot LCD
+    if (robotBase) fetch(robotBase + "/api/display?text=" + encodeURIComponent(reply)).catch(() => {});
+
+    // Unified single call to /api/voice — handles motor + servos + action + music
+    voiceMove(cmd !== "NONE" ? cmd : "NONE", reply, servos, action !== "none" ? action : null, music > 0 ? music : 0);
+
+  } catch (e) {
+    sysLog("AI error: " + e.message + " — using built-in KB", "warn");
+    // Fallback to local KB on AI error
+    document.getElementById("aiResponse").innerText = local.text;
+    speak(local.text);
+    showAITags(local.tags || []);
+    executeLocalResult(local, txt);
+  }
+
+  btn.disabled = false; btn.innerText = "🚀 SEND TO AI BRAIN";
+}
+
+function executeLocalResult(result, originalText) {
+  if (result.action && robotBase) {
+    setTimeout(() => {
+      fetch(robotBase + "/api/action?type=" + result.action).catch(() => {});
+    }, 600);
+  }
+  if (result.servo) {
+    if (result.servo === "both_up") { setSv("rh1", 0); setSv("lh1", 180); }
+    else if (result.servo === "both_down") { setSv("rh1", 90); setSv("lh1", 90); }
+    else { setSv(result.servo.name, result.servo.pos); }
+  }
+  if (result.music && robotBase) setTimeout(() => playSong(result.music), 800);
+  if (robotBase) fetch(robotBase + "/api/message?text=" + encodeURIComponent(originalText)).catch(() => {});
+}
+
+function showAITags(tags) {
+  const container = document.getElementById("aiTags");
+  container.innerHTML = "";
+  const labels = { servo: "Servo Control", motor: "Motor Drive", action: "Physical Action", buzzer: "Buzzer", qa: "Q&A Response" };
+  tags.forEach(t => {
+    const span = document.createElement("span");
+    span.className = "tag tag-" + t;
+    span.innerText = labels[t] || t;
+    container.appendChild(span);
+  });
+}
+
+// ─── Unified voice command sender → /api/voice (motor+servo+action+music) ─
+function voiceMove(cmd, replyText, servoParams, actionParam, musicParam) {
+  if (!robotBase) { sysLog("Robot not connected", "err"); return; }
+  let url = robotBase + "/api/voice?cmd=" + (cmd || "NONE") + "&text=" + encodeURIComponent(replyText || "");
+  if (servoParams) {
+    if (servoParams.head !== undefined) url += "&servo_head=" + servoParams.head;
+    if (servoParams.lh1  !== undefined) url += "&servo_lh1="  + servoParams.lh1;
+    if (servoParams.lh2  !== undefined) url += "&servo_lh2="  + servoParams.lh2;
+    if (servoParams.rh1  !== undefined) url += "&servo_rh1="  + servoParams.rh1;
+    if (servoParams.rh2  !== undefined) url += "&servo_rh2="  + servoParams.rh2;
+  }
+  if (actionParam) url += "&action=" + actionParam;
+  if (musicParam > 0) url += "&music=" + musicParam;
+  fetch(url)
+    .then(() => sysLog("Voice → motor:" + (cmd||"NONE") + " action:" + (actionParam||"-") + " music:" + (musicParam||0), "ok"))
+    .catch(e => sysLog("Voice error: " + e.message, "err"));
+}
+
+// ─── Detect movement (offline fallback) ──────────────────────────────
+function detectMovementIntent(text) {
+  const t = text.toLowerCase();
+  if (t.includes("forward") || t.includes("go ahead") || t.includes("go front") || t.includes("straight")) return "FORWARD";
+  if (t.includes("backward") || t.includes("go back") || t.includes("reverse")) return "BACK";
+  if (t.includes("turn left") || t.includes("go left")) return "LEFT";
+  if (t.includes("turn right") || t.includes("go right")) return "RIGHT";
+  if (t.includes("stop") || t.includes("halt") || t.includes("freeze")) return "STOP";
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SPEECH RECOGNITION (Microphone)
+// ═══════════════════════════════════════════════════════════════════════
+function initSpeechRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { sysLog("Speech recognition not supported in this browser", "warn"); return; }
+  recognition = new SR();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById("micBtn").classList.add("listening");
+    document.getElementById("micTranscript").innerText = "Listening...";
+    sysLog("Mic listening...", "info");
+  };
+
+  recognition.onresult = (e) => {
+    let interim = "", final = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const display = final || interim;
+    document.getElementById("micTranscript").innerText = display;
+    if (final) { lastTranscript = final.trim(); sysLog("Heard: " + lastTranscript, "info"); }
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById("micBtn").classList.remove("listening");
+    sysLog("Mic stopped — processing...", "info");
+    if (lastTranscript) {
+      sendToAI();
+    }
+  };
+
+  recognition.onerror = (e) => {
+    isListening = false;
+    document.getElementById("micBtn").classList.remove("listening");
+    sysLog("Mic error: " + e.error, "err");
+  };
+}
+
+function toggleMic() {
+  if (!recognition) initSpeechRecognition();
+  if (!recognition) { sysLog("Speech recognition unavailable", "err"); return; }
+  if (isListening) {
+    recognition.stop();
+  } else {
+    lastTranscript = "";
+    recognition.start();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════════
+window.addEventListener("load", () => {
+  updateJoystickDimensions();
+  sysLog("CognoSpace Humanoid Controller v2.0 loaded", "ok");
+  sysLog("Enter Robot IP + Gemini key to connect. Gemini key optional — built-in Q&A works offline!", "info");
+  initSpeechRecognition();
+});
+</script>
+</body>
+</html>
